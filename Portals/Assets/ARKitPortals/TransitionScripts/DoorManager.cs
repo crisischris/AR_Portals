@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.XR.iOS;
 using UnityEngine.UI;
 
 // This class shows and hides doors (aka portals) when you walk into them. It listens for all OnPortalTransition events
@@ -8,7 +9,6 @@ using UnityEngine.UI;
 public class DoorManager : MonoBehaviour
 {
     public delegate void DoorAction(Transform door);
-
     public static event DoorAction OnDoorOpen;
 
     public Vector3 cameraPos;
@@ -19,7 +19,8 @@ public class DoorManager : MonoBehaviour
     public GameObject[] doorToVirtual;
     public GameObject[] desitnations;
     public GameObject doorToReality;
-    public GameObject portalOpener;
+    public GameObject scanText;
+    public GameObject planeText;
     public GameObject ballThrower;
     public GameObject ball;
     public GameObject particle;
@@ -34,15 +35,17 @@ public class DoorManager : MonoBehaviour
 
     public int i = 0;
     public int doorCount;
-
     public float j = 0;
+    public int k = 0;
     public float currDoorYRotation;
-   
+
     public bool ballInAir = false;
     private bool isCurrDoorOpen = false;
     private bool isRealityDoorOpen = false;
     private bool isNextDoorVirtual = true;
     private bool setDoorAnimation = false;
+    private bool setDoorRise = false;
+
 
 
     void Start()
@@ -57,22 +60,60 @@ public class DoorManager : MonoBehaviour
 
     void Update()
     {
+
+
+        if (Input.GetMouseButtonDown(0))
+        {
+            if(isRealityDoorOpen == false)
+            OpenDoorInFront(Input.mousePosition);
+        }
+
+
+        GameObject[] planeObjects = GameObject.FindGameObjectsWithTag("plane");
+        for (k = 0; k < planeObjects.Length; k++)
+        {
+            if (planeObjects[k].activeInHierarchy && isCurrDoorOpen == false)
+            {
+                scanText.SetActive(false);
+                planeText.SetActive(true);
+            }
+
+            else
+            {
+                planeText.SetActive(false);
+            }
+        }
+
+      
+
         cameraPos = mainCamera.transform.position;
+
+
+        // ANIMATE DOOR //
 
         if (setDoorAnimation == true)
         {
             currDoor.transform.localScale *= 1.075f;
         }
 
-        if (isRealityDoorOpen == true)
+        if (setDoorRise == true)
         {
-            portalOpener.SetActive(false);
+            Vector3 risePos = currDoor.transform.position;
+            risePos.y += .045f;
+            currDoor.transform.position = risePos;
         }
 
-        else
+
+        // SET ACTIVE UI //`
+
+        if (isRealityDoorOpen == true)
         {
-            portalOpener.SetActive(true);
+            scanText.SetActive(false);
+            planeText.SetActive(false);
+            ballThrower.SetActive(false);
         }
+
+
 
         if (isCurrDoorOpen == true && ballInAir == false)
         {
@@ -84,37 +125,46 @@ public class DoorManager : MonoBehaviour
         }
     }
 
-    // This method is called from the Spawn Portal button in the UI. It spawns a portal in front of you.
-    public void OpenDoorInFront()
+    public void OpenDoorInFront(Vector2 point)
     {
-        if (!isCurrDoorOpen)
+        RaycastHit hit;
+
+        if (Physics.Raycast(mainCamera.ScreenPointToRay(point), out hit))
         {
-            if (i < doorToVirtual.Length)
+            if (!isCurrDoorOpen)
             {
-                currDoor = doorToVirtual[i];
-                i++;
-            }
+                if (i < doorToVirtual.Length)
+                {
+                    currDoor = doorToVirtual[i];
+                    i++;
+                }
 
-            else
-            {
-                i = 0;
-                currDoor = doorToVirtual[i];
-            }
+                else
+                {
+                    i = 0;
+                    currDoor = doorToVirtual[i];
+                }
 
-            StartCoroutine((spawnDoor()));
-            currDoor.transform.position = (Vector3.ProjectOnPlane(mainCamera.transform.forward, Vector3.up)).normalized
-                + mainCamera.transform.position;
-            currDoor.transform.rotation = Quaternion.LookRotation(
+                spawnDoor();
+                StartCoroutine(growDoor());
+                currDoor.transform.position = hit.point;
+                currDoor.transform.rotation = Quaternion.LookRotation(
                 Vector3.ProjectOnPlane(currDoor.transform.position - mainCamera.transform.position, Vector3.up));
-            currDoor.GetComponentInParent<Portal>().Source.transform.localPosition = currDoor.transform.position;
-            isCurrDoorOpen = true;
+                Vector3 yAdjusted = new Vector3(currDoor.transform.position.x, currDoor.transform.position.y + .5f, currDoor.transform.position.z);
+                currDoor.GetComponentInParent<Portal>().Source.transform.localPosition = yAdjusted;  //currDoor.transform.position;
+                StartCoroutine(levitate());
+                isCurrDoorOpen = true;
 
-            if (OnDoorOpen != null)
-            {
-                OnDoorOpen(currDoor.transform);
+                if (OnDoorOpen != null)
+                {
+                    OnDoorOpen(currDoor.transform);
+                }
             }
         }
     }
+
+
+
 
     // Respond to the player walking into the doorway. Since there are only two portals, we don't need to pass which
     // portal was entered.
@@ -124,7 +174,6 @@ public class DoorManager : MonoBehaviour
         {
             Vector3 realDoorPos = new Vector3(mainCamera.transform.position.x, mainCamera.transform.position.y + .5f, mainCamera.transform.position.z);
             Quaternion matchAngles = currDoor.transform.localRotation;
-            //Quaternion adjustMatchAngles = Quaternion.Euler(matchAngles.x, matchAngles.y-180, matchAngles.z);
             currDoor.SetActive(false);
             isRealityDoorOpen = true;
             doorToReality.SetActive(true);
@@ -135,7 +184,6 @@ public class DoorManager : MonoBehaviour
             StartCoroutine((turnOnColliderLong(mainCamera)));
             GameObject poof = GameObject.FindWithTag("poof");
             Destroy(poof);
-
             isCurrDoorOpen = false;
             doorCount = 1;
         }
@@ -146,6 +194,8 @@ public class DoorManager : MonoBehaviour
             doorToReality.SetActive(false);
             doorCount = 0;
         }
+       // ResetScene();
+
     }
 
     public void throwBall()
@@ -163,6 +213,20 @@ public class DoorManager : MonoBehaviour
         StartCoroutine((turnOnCollider(mainCamera)));
     }
 
+    void spawnDoor()
+    {
+        audioSourcePortal.PlayOneShot(portalSound);
+        currDoor.SetActive(true);
+        GameObject newParticle = Instantiate(particle, currDoor.transform.position, Quaternion.identity);
+        newParticle.tag = "poof";
+    }
+
+  /*  public void ResetScene()
+    {
+        ARKitWorldTrackingSessionConfiguration sessionConfig = new ARKitWorldTrackingSessionConfiguration(UnityARAlignment.UnityARAlignmentGravity, UnityARPlaneDetection.Horizontal);
+       UnityARSessionNativeInterface.GetARSessionNativeInterface().RunWithConfigAndOptions(sessionConfig, UnityARSessionRunOption.ARSessionRunOptionRemoveExistingAnchors | UnityARSessionRunOption.ARSessionRunOptionResetTracking);   
+    }*/
+
     IEnumerator turnOnCollider(Camera camera)
     {
         Collider sc = camera.GetComponentInChildren<SphereCollider>();
@@ -178,14 +242,17 @@ public class DoorManager : MonoBehaviour
         sc.enabled = true;
     }
 
-    IEnumerator spawnDoor()
+    IEnumerator growDoor()
     {
-        audioSourcePortal.PlayOneShot(portalSound);
-        currDoor.SetActive(true);
-        GameObject newParticle = Instantiate(particle, currDoor.transform.position, Quaternion.identity);
-        newParticle.tag = "poof";
         setDoorAnimation = true;
         yield return new WaitForSeconds(.5f);
         setDoorAnimation = false;
+    }
+
+    IEnumerator levitate()
+    {
+        setDoorRise = true;
+        yield return new WaitForSeconds(.5f);
+        setDoorRise = false;
     }
 }

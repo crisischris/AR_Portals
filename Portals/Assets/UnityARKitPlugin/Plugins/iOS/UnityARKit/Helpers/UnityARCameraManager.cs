@@ -29,6 +29,10 @@ public class UnityARCameraManager : MonoBehaviour {
 		config.enableLightEstimation = enableLightEstimation;
         m_session.RunWithConfig(config);
 
+        UnityARSessionRunOption options = new UnityARSessionRunOption();
+options = UnityARSessionRunOption.ARSessionRunOptionRemoveExistingAnchors | UnityARSessionRunOption.ARSessionRunOptionResetTracking;
+m_session.RunWithConfigAndOptions(config, options);
+
 		if (m_camera == null) {
 			m_camera = Camera.main;
 		}

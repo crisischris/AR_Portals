@@ -12,6 +12,7 @@ public class BallBehavior : MonoBehaviour {
     public GameObject Destination3;
     public GameObject DestinationHome;
 
+
      void OnTriggerEnter(Collider col)
     {
         if (col.gameObject.CompareTag("Door1"))
