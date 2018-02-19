@@ -38,6 +38,7 @@ public class DoorManager : MonoBehaviour
     public float j = 0;
     public int k = 0;
     public float currDoorYRotation;
+    public float scaleUp = .1f;
 
     public bool ballInAir = false;
     private bool isCurrDoorOpen = false;
@@ -60,14 +61,11 @@ public class DoorManager : MonoBehaviour
 
     void Update()
     {
-
-
         if (Input.GetMouseButtonDown(0))
         {
             if(isRealityDoorOpen == false)
             OpenDoorInFront(Input.mousePosition);
         }
-
 
         GameObject[] planeObjects = GameObject.FindGameObjectsWithTag("plane");
         for (k = 0; k < planeObjects.Length; k++)
@@ -93,6 +91,8 @@ public class DoorManager : MonoBehaviour
 
         if (setDoorAnimation == true)
         {
+            //Vector3 animateScale = new Vector3(currDoor.transform.position.x + scaleUp, currDoor.transform.position.y, currDoor.transform.position.z+scaleUp);
+            //scaleUp *= 1.1f;
             currDoor.transform.localScale *= 1.075f;
         }
 
@@ -151,8 +151,8 @@ public class DoorManager : MonoBehaviour
                 currDoor.transform.rotation = Quaternion.LookRotation(
                 Vector3.ProjectOnPlane(currDoor.transform.position - mainCamera.transform.position, Vector3.up));
                 Vector3 yAdjusted = new Vector3(currDoor.transform.position.x, currDoor.transform.position.y + .5f, currDoor.transform.position.z);
-                currDoor.GetComponentInParent<Portal>().Source.transform.localPosition = yAdjusted;  //currDoor.transform.position;
-                StartCoroutine(levitate());
+                currDoor.GetComponentInParent<Portal>().Source.transform.localPosition = yAdjusted; //currDoor.transform.position;
+               // StartCoroutine(levitate());
                 isCurrDoorOpen = true;
 
                 if (OnDoorOpen != null)
@@ -172,7 +172,7 @@ public class DoorManager : MonoBehaviour
     {
         if (doorCount == 0)
         {
-            Vector3 realDoorPos = new Vector3(mainCamera.transform.position.x, mainCamera.transform.position.y + .5f, mainCamera.transform.position.z);
+            Vector3 realDoorPos = new Vector3(mainCamera.transform.position.x, mainCamera.transform.position.y-1.5f, mainCamera.transform.position.z);
             Quaternion matchAngles = currDoor.transform.localRotation;
             currDoor.SetActive(false);
             isRealityDoorOpen = true;
@@ -238,14 +238,14 @@ public class DoorManager : MonoBehaviour
     IEnumerator turnOnColliderLong(Camera camera)
     {
         Collider sc = camera.GetComponentInChildren<SphereCollider>();
-        yield return new WaitForSeconds(1);
+        yield return new WaitForSeconds(3);
         sc.enabled = true;
     }
 
     IEnumerator growDoor()
     {
         setDoorAnimation = true;
-        yield return new WaitForSeconds(.5f);
+        yield return new WaitForSeconds(.65f);
         setDoorAnimation = false;
     }
 
